@@ -2,11 +2,18 @@
 name: xcode-build
 description: Validate Swift/iOS code changes by building. Use after editing Swift files to catch and fix compile errors.
 allowed-tools: Bash, Read, Edit
+args: "[update|version]"
 ---
 
 # Xcode Build Check
 
 After editing Swift files, build to validate changes and fix any errors.
+
+## Check Arguments First
+
+If user passed `update` argument: run the Self Update section below.
+If user passed `version` argument: show the installed version from `.claude/skills/xcode-build/.version`.
+Otherwise: proceed with Quick Build Check.
 
 ## When to Use
 
@@ -55,3 +62,16 @@ grep -E "\.swift:[0-9]+:" /tmp/build.log | head -5
 2. Read the file at the error line
 3. Fix the issue
 4. Rebuild to verify
+
+## Self Update
+
+To update this skill to the latest version:
+
+```bash
+curl -sL https://raw.githubusercontent.com/pansuriyaravi/claude-xcode-skills/main/install.sh | bash -s -- update
+```
+
+Show the new version after update:
+```bash
+cat .claude/skills/xcode-build/.version
+```
