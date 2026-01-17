@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 REPO_URL="https://github.com/pansuriyaravi/claude-xcode-skills"
 SKILL_NAME="xcode-build"
 BASE_URL="https://raw.githubusercontent.com/pansuriyaravi/claude-xcode-skills"
@@ -31,39 +31,31 @@ install_skill_global() {
     echo -e "${GREEN}✓ Skill installed globally${NC}"
 }
 
-install_hooks_project() {
-    echo "Installing hooks to .claude/settings.local.json..."
+install_permissions_project() {
+    echo "Installing permissions to .claude/settings.local.json..."
 
     SETTINGS_FILE=".claude/settings.local.json"
     mkdir -p .claude
 
     if [[ -f "$SETTINGS_FILE" ]]; then
-        # Backup existing
         cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup"
         echo -e "${YELLOW}  Backed up existing settings to $SETTINGS_FILE.backup${NC}"
     fi
 
-    # Download and merge hooks
-    curl -sL "$BASE_URL/$BRANCH/settings-template.json" -o /tmp/xcode-hooks.json
+    curl -sL "$BASE_URL/$BRANCH/settings-template.json" -o /tmp/xcode-permissions.json
 
-    if [[ -f "$SETTINGS_FILE" ]]; then
-        # Merge hooks into existing settings using jq if available
-        if command -v jq &> /dev/null; then
-            jq -s '.[0] * .[1]' "$SETTINGS_FILE.backup" /tmp/xcode-hooks.json > "$SETTINGS_FILE"
-        else
-            echo -e "${YELLOW}  jq not found - replacing settings file${NC}"
-            cp /tmp/xcode-hooks.json "$SETTINGS_FILE"
-        fi
+    if [[ -f "$SETTINGS_FILE" ]] && command -v jq &> /dev/null; then
+        jq -s '.[0] * .[1]' "$SETTINGS_FILE.backup" /tmp/xcode-permissions.json > "$SETTINGS_FILE"
     else
-        cp /tmp/xcode-hooks.json "$SETTINGS_FILE"
+        cp /tmp/xcode-permissions.json "$SETTINGS_FILE"
     fi
 
-    rm /tmp/xcode-hooks.json
-    echo -e "${GREEN}✓ Hooks installed${NC}"
+    rm /tmp/xcode-permissions.json
+    echo -e "${GREEN}✓ Permissions installed${NC}"
 }
 
-install_hooks_global() {
-    echo "Installing hooks to ~/.claude/settings.json..."
+install_permissions_global() {
+    echo "Installing permissions to ~/.claude/settings.json..."
 
     SETTINGS_FILE=~/.claude/settings.json
     mkdir -p ~/.claude
@@ -73,33 +65,28 @@ install_hooks_global() {
         echo -e "${YELLOW}  Backed up existing settings to $SETTINGS_FILE.backup${NC}"
     fi
 
-    curl -sL "$BASE_URL/$BRANCH/settings-template.json" -o /tmp/xcode-hooks.json
+    curl -sL "$BASE_URL/$BRANCH/settings-template.json" -o /tmp/xcode-permissions.json
 
-    if [[ -f "$SETTINGS_FILE" ]]; then
-        if command -v jq &> /dev/null; then
-            jq -s '.[0] * .[1]' "$SETTINGS_FILE.backup" /tmp/xcode-hooks.json > "$SETTINGS_FILE"
-        else
-            echo -e "${YELLOW}  jq not found - replacing settings file${NC}"
-            cp /tmp/xcode-hooks.json "$SETTINGS_FILE"
-        fi
+    if [[ -f "$SETTINGS_FILE" ]] && command -v jq &> /dev/null; then
+        jq -s '.[0] * .[1]' "$SETTINGS_FILE.backup" /tmp/xcode-permissions.json > "$SETTINGS_FILE"
     else
-        cp /tmp/xcode-hooks.json "$SETTINGS_FILE"
+        cp /tmp/xcode-permissions.json "$SETTINGS_FILE"
     fi
 
-    rm /tmp/xcode-hooks.json
-    echo -e "${GREEN}✓ Hooks installed globally${NC}"
+    rm /tmp/xcode-permissions.json
+    echo -e "${GREEN}✓ Permissions installed globally${NC}"
 }
 
 uninstall_project() {
     rm -rf ".claude/skills/$SKILL_NAME"
     echo "Removed skill from project."
-    echo -e "${YELLOW}Note: Hooks in .claude/settings.local.json not removed (manual cleanup needed)${NC}"
+    echo -e "${YELLOW}Note: Permissions in .claude/settings.local.json not removed (manual cleanup needed)${NC}"
 }
 
 uninstall_global() {
     rm -rf ~/.claude/skills/$SKILL_NAME
     echo "Removed skill globally."
-    echo -e "${YELLOW}Note: Hooks in ~/.claude/settings.json not removed (manual cleanup needed)${NC}"
+    echo -e "${YELLOW}Note: Permissions in ~/.claude/settings.json not removed (manual cleanup needed)${NC}"
 }
 
 show_version() {
@@ -126,10 +113,9 @@ show_help() {
     echo "Usage: install.sh <command> [branch/tag]"
     echo ""
     echo "Commands:"
-    echo "  project        Install skill + hooks to project (.claude/)"
-    echo "  global         Install skill + hooks globally (~/.claude/)"
-    echo "  skill-only     Install only skill (no hooks) to project"
-    echo "  hooks-only     Install only hooks to project"
+    echo "  project        Install skill + permissions to project (.claude/)"
+    echo "  global         Install skill + permissions globally (~/.claude/)"
+    echo "  skill-only     Install only skill (no permissions) to project"
     echo "  update         Update project installation"
     echo "  update-global  Update global installation"
     echo "  uninstall      Remove from project"
@@ -137,26 +123,29 @@ show_help() {
     echo "  version        Show installed versions"
     echo ""
     echo "Examples:"
-    echo "  # Full install (skill + hooks)"
+    echo "  # Full install (skill + permissions)"
     echo "  curl -sL $REPO_URL/main/install.sh | bash -s -- project"
     echo ""
     echo "  # Update existing"
     echo "  curl -sL $REPO_URL/main/install.sh | bash -s -- update"
     echo ""
-    echo "  # Skill only (no auto-build hooks)"
+    echo "  # Skill only"
     echo "  curl -sL $REPO_URL/main/install.sh | bash -s -- skill-only"
+    echo ""
+    echo "Usage in Claude:"
+    echo "  Run /xcode-build to validate Swift changes"
 }
 
 case "${1:-project}" in
     project)
         install_skill_project
-        install_hooks_project
+        install_permissions_project
         echo ""
-        echo -e "${GREEN}Done! Claude will auto-build after Swift edits.${NC}"
+        echo -e "${GREEN}Done! Use /xcode-build in Claude to validate Swift changes.${NC}"
         ;;
     global)
         install_skill_global
-        install_hooks_global
+        install_permissions_global
         echo ""
         echo -e "${GREEN}Done! Works in all iOS projects.${NC}"
         ;;
@@ -166,21 +155,15 @@ case "${1:-project}" in
     skill-only-global)
         install_skill_global
         ;;
-    hooks-only)
-        install_hooks_project
-        ;;
-    hooks-only-global)
-        install_hooks_global
-        ;;
     update)
         install_skill_project
-        install_hooks_project
+        install_permissions_project
         echo ""
         echo -e "${GREEN}Updated!${NC}"
         ;;
     update-global)
         install_skill_global
-        install_hooks_global
+        install_permissions_global
         echo ""
         echo -e "${GREEN}Updated globally!${NC}"
         ;;

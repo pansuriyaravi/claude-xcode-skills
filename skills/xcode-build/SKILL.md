@@ -17,15 +17,26 @@ After editing Swift files, build to validate changes and fix any errors.
 ## Quick Build Check
 
 ```bash
-# Find project
-PROJECT=$(ls -d *.xcworkspace 2>/dev/null | head -1 || ls -d *.xcodeproj 2>/dev/null | head -1)
+# Find project (prefer workspace over project)
+PROJECT=$(ls -d *.xcworkspace 2>/dev/null | head -1)
+PROJECT_FLAG="-workspace"
+if [[ -z "$PROJECT" ]]; then
+  PROJECT=$(ls -d *.xcodeproj 2>/dev/null | head -1)
+  PROJECT_FLAG="-project"
+fi
 
 # Get scheme
 SCHEME=$(xcodebuild -list 2>/dev/null | grep -A1 "Schemes:" | tail -1 | xargs)
 
-# Build (simulator is faster)
-xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+# Find available iOS simulator (prefer iPhone 17 Pro, fallback to any iPhone)
+SIMULATOR=$(xcrun simctl list devices available | grep -E "iPhone 17 Pro" | head -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/')
+if [[ -z "$SIMULATOR" ]]; then
+  SIMULATOR=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/')
+fi
+
+# Build using simulator ID
+xcodebuild $PROJECT_FLAG "$PROJECT" -scheme "$SCHEME" \
+  -destination "platform=iOS Simulator,id=$SIMULATOR" \
   -configuration Debug \
   ONLY_ACTIVE_ARCH=YES \
   build 2>&1 | tee /tmp/build.log
