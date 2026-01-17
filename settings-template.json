@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATH\" == *.swift ]]; then touch /tmp/.claude_swift_edited; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ -f /tmp/.claude_swift_edited ]]; then rm /tmp/.claude_swift_edited; PROJECT=$(ls -d *.xcworkspace 2>/dev/null | head -1 || ls -d *.xcodeproj 2>/dev/null | head -1); if [[ -n \"$PROJECT\" ]]; then SCHEME=$(xcodebuild -list 2>/dev/null | grep -A1 'Schemes:' | tail -1 | xargs); xcodebuild -project \"$PROJECT\" -scheme \"$SCHEME\" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -configuration Debug ONLY_ACTIVE_ARCH=YES build 2>&1 | grep -E 'error:|BUILD SUCCEEDED|BUILD FAILED' | head -10; fi; fi",
+            "timeout": 120,
+            "statusMessage": "Building to check for errors..."
+          }
+        ]
+      }
+    ]
+  }
+}
